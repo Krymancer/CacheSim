@@ -5,7 +5,7 @@
 #include <vector>
 #include <cmath>
 
-#define cacheset 8
+#define cacheset 8 
 #define cachedata 4
 #define cachetag 20
 
@@ -17,12 +17,10 @@ typedef struct{
   int data_index;
   int hit;
   int miss;
-  bool d=false;
-  bool v=false;
 }cache_line;
 
 vector<uint64_t> L1,L2,ADDR;
-cache_line cache[256];
+cache_line cache[4][256];
 bool PageFault = false;
 
 uint64_t translateAddress(uint64_t virtual_address,vector<uint64_t> l1table, vector<uint64_t> l2table);
@@ -80,24 +78,37 @@ int main(const int argc,const char *argv[]){
     }
     PageFault = false;
    }
-
-  for(int i=0;i<256;i++){
-    if(cache[i].cache_tag){
-      cache_line show;
-      show.cache_tag = cache[i].cache_tag;
-      show.set_index = cache[i].set_index;
-      show.data_index = cache[i].data_index;
-      show.hit = cache[i].hit;
-      show.miss = cache[i].miss;
-      show.d = cache[i].d;
-      show.v = cache[i].v;
-      uint64_t startaddr = ((show.cache_tag << 12) & 0xFFFFF000) | (show.set_index << 4 );
-      uint64_t finishaddr = startaddr + 15;
-      cout << hex << i << " : ";
-      printf("[0x%08x][0x%08x-0x%08x] H(%d) M(%d) V(%d) D(%d)\n",show.cache_tag,startaddr,finishaddr,show.hit,show.miss,show.v,show.d);
-      //cout << hex /*<< "[0x" << show.cache_tag */<< "] [0x" << startaddr << " - 0x" << finishaddr << "] " << dec << "H(" << show.hit << ") M(" << show.miss << ")" << endl;
+  for(int j=0;j<4;j++){
+    cout << j <<" Way" << endl;
+    for(int i=0;i<256;i++){
+      if(cache[j][i].cache_tag){
+        cache_line show;
+        show.cache_tag = cache[j][i].cache_tag;
+        show.set_index = cache[j][i].set_index;
+        show.data_index = cache[j][i].data_index;
+        show.hit = cache[j][i].hit;
+        show.miss = cache[j][i].miss;
+        uint64_t startaddr = ((show.cache_tag << 12) & 0xFFFFF000) | (show.set_index << 4 );
+        uint64_t finishaddr = startaddr + 15;
+        cout << hex << i << " : ";
+        printf("[0x%08x][0x%08x-0x%08x] H(%d) M(%d)\n",show.cache_tag,startaddr,finishaddr,show.hit,show.miss);
+        //cout << hex /*<< "[0x" << show.cache_tag << "] [0x" << startaddr << " - 0x" << finishaddr << "] " << dec << "H(" << show.hit << ") M(" << show.miss << ")" << endl;
+      }
     }
   }
+
+  int hits=0;
+  int misses=0;
+  for(int i=0;i<4;i++){
+   for(int j=0;j<256;j++){
+     hits += cache[i][j].hit;
+     misses += cache[i][j].miss;
+    }
+  }
+  float hitrate = ((float)hits/(float)ADDR.size()) * 100;
+  float missrate = 100 - hitrate;
+  cout << "Hit Rate: "<< hitrate << endl << "Miss Rate: " << missrate << endl;;
+
   return(0);
 }
 
@@ -163,22 +174,16 @@ int doCache(uint64_t address){
   tag = (address & 0xFFFFF000) >> 12;
   data = (address & 0xF);
 
-    if(cache[set].v){
-      cache[set].d = true;
-      //cache[set].v = false;
+  for(int i=0;i<4;i++){
+    if((cache[i][set].cache_tag == tag)&&(cache[i][set].miss != 0)){
+      cache[i][set].hit++;
+      break;
+      //cache[set].set_index = set;
     }else{
-      cache[set].d = false;
-      cache[set].v = true;
+      cache[i][set].miss++;
+      cache[i][set].cache_tag = tag;
+      cache[i][set].set_index = set;
     }
-
-  if((cache[set].cache_tag == tag)&&(cache[set].miss != 0)){
-    cache[set].hit++;
-    //cache[set].set_index = set;
-  }else{
-    cache[set].miss++;
-    cache[set].cache_tag = tag;
-    cache[set].set_index = set;
   }
-
   return 0;
 }

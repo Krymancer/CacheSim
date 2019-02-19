@@ -17,8 +17,6 @@ typedef struct{
   int data_index;
   int hit;
   int miss;
-  bool d=false;
-  bool v=false;
 }cache_line;
 
 vector<uint64_t> L1,L2,ADDR;
@@ -89,12 +87,10 @@ int main(const int argc,const char *argv[]){
       show.data_index = cache[i].data_index;
       show.hit = cache[i].hit;
       show.miss = cache[i].miss;
-      show.d = cache[i].d;
-      show.v = cache[i].v;
       uint64_t startaddr = ((show.cache_tag << 12) & 0xFFFFF000) | (show.set_index << 4 );
       uint64_t finishaddr = startaddr + 15;
       cout << hex << i << " : ";
-      printf("[0x%08x][0x%08x-0x%08x] H(%d) M(%d) V(%d) D(%d)\n",show.cache_tag,startaddr,finishaddr,show.hit,show.miss,show.v,show.d);
+      printf("[0x%08x][0x%08x-0x%08x] H(%d) M(%d)\n",show.cache_tag,startaddr,finishaddr,show.hit,show.miss);
       //cout << hex /*<< "[0x" << show.cache_tag */<< "] [0x" << startaddr << " - 0x" << finishaddr << "] " << dec << "H(" << show.hit << ") M(" << show.miss << ")" << endl;
     }
   }
@@ -162,14 +158,6 @@ int doCache(uint64_t address){
   set = (address & 0x00000FF0) >> 4;
   tag = (address & 0xFFFFF000) >> 12;
   data = (address & 0xF);
-
-    if(cache[set].v){
-      cache[set].d = true;
-      //cache[set].v = false;
-    }else{
-      cache[set].d = false;
-      cache[set].v = true;
-    }
 
   if((cache[set].cache_tag == tag)&&(cache[set].miss != 0)){
     cache[set].hit++;
